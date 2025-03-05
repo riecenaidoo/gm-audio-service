@@ -1,0 +1,9 @@
+# Environments
+.venv
+.env
+
+# Configs
+.idea
+
+# Cache
+__pycache__
