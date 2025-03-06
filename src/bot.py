@@ -29,6 +29,24 @@ class Server:
         return {"id": self.id, "name": self.name}
 
 
+class ServerAudio:
+    def __init__(self, server: Guild):
+        self._server: Guild = server
+
+    def _get_channel(self, channel_id: int) -> VoiceChannel:
+        for channel in self._server.voice_channels:
+            if channel.id == channel_id:
+                return channel
+        raise Exception(
+            f"Channel with id: '{channel_id}' does not exist in Server: '{self._server.name}'."
+        )
+
+    async def join_channel(self, channel_id: int):
+        channel: VoiceChannel = self._get_channel(channel_id)
+        await discord.VoiceChannel.connect(channel)
+        _log.info("Joined: %s > %s.", self._server.name, channel.name)
+
+
 class AudioClient(discord.Client):
     """Discord Client that manages the streaming of audio into voice channels."""
 
@@ -38,19 +56,15 @@ class AudioClient(discord.Client):
     def get_servers(self) -> list[Server]:
         return [Server(guild) for guild in self.guilds]
 
-    def get_channels(self, server_id: int) -> list[Channel]:
+    def _get_server(self, server_id: int) -> Guild:
         for server in self.guilds:
             if server.id == server_id:
-                return [Channel(channel) for channel in server.voice_channels]
+                return server
         raise Exception(f"Server with id: '{server_id}' does not exist.")
 
-    async def join_channel_in_server(self, channel_id: int, server_id: int) -> None:
-        for server in self.guilds:
-            if server.id == server_id:
-                for channel in server.voice_channels:
-                    if channel.id == channel_id:
-                        await discord.VoiceChannel.connect(channel)
-                        _log.info("Joined: %s > %s.", server.name, channel.name)
-                        return
-                raise Exception(f"Channel with id: '{channel_id}' does not exist.")
-        raise Exception(f"Server with id: '{server_id}' does not exist.")
+    def get_channels(self, server_id: int) -> list[Channel]:
+        server: Guild = self._get_server(server_id)
+        return [Channel(channel) for channel in server.voice_channels]
+
+    def get_server_audio(self, server_id: int) -> ServerAudio:
+        return ServerAudio(self._get_server(server_id))
