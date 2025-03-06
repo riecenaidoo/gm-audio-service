@@ -27,8 +27,8 @@ class AudioServiceAPI(Flask):
         )
         self.add_url_rule(
             "/servers/<int:server_id>/audio",
-            view_func=self._create_server_audio,
-            methods=["POST"],
+            view_func=self._server_audio,
+            methods=["POST", "DELETE"],
         )
 
     def _get_servers(self) -> Response:
@@ -39,11 +39,21 @@ class AudioServiceAPI(Flask):
             [channel.serialize() for channel in self.client.get_channels(server_id)]
         )
 
-    def _create_server_audio(self, server_id: int) -> Response:
-        data = request.get_json()
-        channel_id: int = int(data.get("channel_id"))
+    def _server_audio(self, server_id: int) -> Response:
         server_audio: ServerAudio = self.client.get_server_audio(server_id)
-        asyncio.run_coroutine_threadsafe(
-            server_audio.join_channel(channel_id), self.client.loop
-        )
-        return jsonify(200)
+
+        match request.method:
+            case "POST":
+                data = request.get_json()
+                channel_id: int = int(data.get("channel_id"))
+                asyncio.run_coroutine_threadsafe(
+                    server_audio.join_channel(channel_id), self.client.loop
+                )
+                return jsonify(200)
+            case "DELETE":
+                asyncio.run_coroutine_threadsafe(
+                    server_audio.disconnect(), self.client.loop
+                )
+                return jsonify(200)
+            case _:
+                return jsonify(400)

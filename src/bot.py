@@ -46,6 +46,16 @@ class ServerAudio:
         await discord.VoiceChannel.connect(channel)
         _log.info("Joined: %s > %s.", self._server.name, channel.name)
 
+    async def disconnect(self):
+        if not self._server.voice_client:
+            _log.warning(
+                "Can't disconnect from %s - not connected to any channel",
+                self._server.name,
+            )
+            return
+        await self._server.voice_client.disconnect(force=True)
+        _log.info("Disconnected from %s.", self._server.name)
+
 
 class AudioClient(discord.Client):
     """Discord Client that manages the streaming of audio into voice channels."""
