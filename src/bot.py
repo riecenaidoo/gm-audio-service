@@ -43,3 +43,14 @@ class AudioClient(discord.Client):
             if server.id == server_id:
                 return [Channel(channel) for channel in server.voice_channels]
         raise Exception(f"Server with id: '{server_id}' does not exist.")
+
+    async def join_channel_in_server(self, channel_id: int, server_id: int) -> None:
+        for server in self.guilds:
+            if server.id == server_id:
+                for channel in server.voice_channels:
+                    if channel.id == channel_id:
+                        await discord.VoiceChannel.connect(channel)
+                        _log.info("Joined: %s > %s.", server.name, channel.name)
+                        return
+                raise Exception(f"Channel with id: '{channel_id}' does not exist.")
+        raise Exception(f"Server with id: '{server_id}' does not exist.")
