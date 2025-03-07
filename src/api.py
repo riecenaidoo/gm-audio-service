@@ -1,6 +1,7 @@
 import asyncio
 
 from flask import Flask, Response, jsonify, request
+from flask_cors import CORS
 
 from bot import AudioClient, ServerAudio
 from utils import to_thread
@@ -10,6 +11,7 @@ class AudioServiceAPI(Flask):
     def __init__(self, client: AudioClient, import_name: str):
         super().__init__(import_name)
         self.client = client
+        self.cors = CORS(self, resources={r"/servers/*": {"origins": "http://localhost:4200"}})
         self._add_routes()
 
     @to_thread
