@@ -17,7 +17,7 @@ class Channel:
         self.name: str = channel.name
 
     def serialize(self) -> dict:
-        return {"id": self.id, "name": self.name}
+        return {"id": str(self.id), "name": self.name}
 
 
 class Server:
@@ -26,7 +26,7 @@ class Server:
         self.name: str = server.name
 
     def serialize(self) -> dict:
-        return {"id": self.id, "name": self.name}
+        return {"id": str(self.id), "name": self.name}
 
 
 class ServerAudio:
