@@ -1,4 +1,5 @@
 import asyncio
+from json import dumps
 
 from flask import Flask, Response, jsonify, request
 from flask_cors import CORS
@@ -42,24 +43,45 @@ class AudioServiceAPI(Flask):
         )
 
     def _server_audio(self, server_id: int) -> Response:
+        """Supports GET, POST, DELETE"""
         server_audio: ServerAudio = self.client.get_server_audio(server_id)
 
         match request.method:
             case "GET":
                 if server_audio.is_connected():
                     return jsonify(server_audio.serialize())
-                return jsonify(404)
+                body: dict = {
+                    "error": "Server does not have an Audio client connected.",
+                    "message": "An Audio client can be connected via a POST/ to this endpoint.",
+                }
+                return Response(
+                    response=dumps(body), status=404, mimetype="application/json"
+                )
             case "POST":
-                data = request.get_json()
+                data: dict = request.get_json()
+                if "channel_id" not in data.keys():
+                    body: dict = {
+                        "error": "Required field 'channel_id' missing.",
+                        "message": "You must specify the Channel in the Server to connect the Audio client to.",
+                    }
+                    # https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/422
+                    return Response(
+                        response=dumps(body), status=422, mimetype="application/json"
+                    )
+                # Could validate this as well, and if not correct return 400.
                 channel_id: int = int(data.get("channel_id"))
+                # Should amend signature to grab the channel, and if not found return 400.
                 asyncio.run_coroutine_threadsafe(
                     server_audio.join_channel(channel_id), self.client.loop
                 )
-                return jsonify(200)
+                return Response(status=202)
             case "DELETE":
+                if not server_audio.is_connected():
+                    return Response(status=404)
                 asyncio.run_coroutine_threadsafe(
                     server_audio.disconnect(), self.client.loop
                 )
-                return jsonify(200)
+                # https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/202
+                return Response(status=202)
             case _:
-                return jsonify(400)
+                raise Exception(f"Procedure for {request.method} is unmapped.")
