@@ -59,12 +59,12 @@ class ServerAudio:
             "channel": self.connected_to().serialize() if self.is_connected() else {}
         }
 
-    async def join_channel(self, channel_id: int):
+    async def join_channel(self, channel_id: int) -> None:
         channel: VoiceChannel = self._get_channel(channel_id)
         await discord.VoiceChannel.connect(channel)
         _log.info("Joined: %s > %s.", self._server.name, channel.name)
 
-    async def disconnect(self):
+    async def disconnect(self) -> None:
         if not self._server.voice_client:
             _log.warning(
                 "Can't disconnect from %s - not connected to any channel",
