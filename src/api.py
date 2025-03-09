@@ -30,7 +30,7 @@ class AudioServiceAPI(Flask):
         self.add_url_rule(
             "/servers/<int:server_id>/audio",
             view_func=self._server_audio,
-            methods=["POST", "DELETE"],
+            methods=["GET", "POST", "DELETE"],
         )
 
     def _get_servers(self) -> Response:
@@ -45,6 +45,10 @@ class AudioServiceAPI(Flask):
         server_audio: ServerAudio = self.client.get_server_audio(server_id)
 
         match request.method:
+            case "GET":
+                if server_audio.is_connected():
+                    return jsonify(server_audio.serialize())
+                return jsonify(404)
             case "POST":
                 data = request.get_json()
                 channel_id: int = int(data.get("channel_id"))

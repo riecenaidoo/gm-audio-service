@@ -41,6 +41,24 @@ class ServerAudio:
             f"Channel with id: '{channel_id}' does not exist in Server: '{self._server.name}'."
         )
 
+    def is_connected(self) -> bool:
+        return self._server.voice_client is not None
+
+    def connected_to(self) -> Channel:
+        if not self.is_connected():
+            raise Exception(f"ServerAudio[{self._server.name}] is not connected.")
+        for voice_channel in self._server.voice_channels:
+            if voice_channel == self._server.voice_client.channel:
+                return Channel(voice_channel)
+        raise Exception(
+            f"ServerAudio[{self._server.name}] is connected, but to a Channel that cannot be found in the Server."
+        )
+
+    def serialize(self) -> dict:
+        return {
+            "channel": self.connected_to().serialize() if self.is_connected() else {}
+        }
+
     async def join_channel(self, channel_id: int):
         channel: VoiceChannel = self._get_channel(channel_id)
         await discord.VoiceChannel.connect(channel)
