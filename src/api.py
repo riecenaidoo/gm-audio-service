@@ -13,7 +13,11 @@ class AudioServiceAPI(Flask):
         super().__init__(import_name)
         self.client = client
         self.cors = CORS(
-            self, resources={r"/servers/*": {"origins": "http://localhost:4200"}}
+            self,
+            resources={
+                r"/": {"origins": "http://localhost:4200"},
+                r"/servers/*": {"origins": "http://localhost:4200"},
+            },
         )
         self._add_routes()
 
@@ -26,6 +30,7 @@ class AudioServiceAPI(Flask):
         self.run(host=host, port=port)
 
     def _add_routes(self) -> None:
+        self.add_url_rule("/", view_func=self._get)
         self.add_url_rule("/servers", view_func=self._get_servers)
         self.add_url_rule(
             "/servers/<int:server_id>/channels", view_func=self._get_channels
@@ -35,6 +40,10 @@ class AudioServiceAPI(Flask):
             view_func=self._server_audio,
             methods=["GET", "POST", "DELETE"],
         )
+
+    def _get(self):
+        """Application (AudioService) information."""
+        return jsonify(self.client.serialize())
 
     def _get_servers(self) -> Response:
         return jsonify([server.serialize() for server in self.client.get_servers()])

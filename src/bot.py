@@ -81,6 +81,13 @@ class AudioClient(discord.Client):
     def __init__(self, *, intents: Intents, **options: typing.Any):
         super().__init__(intents=intents, **options)
 
+    def serialize(self) -> dict:
+        return {
+            "name": self.application.name,
+            "icon_url": self.application.icon.url,
+            "online": self.is_ready(),
+        }
+
     def get_servers(self) -> list[Server]:
         return [Server(guild) for guild in self.guilds]
 
