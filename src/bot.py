@@ -61,7 +61,10 @@ class ServerAudio:
 
     async def join_channel(self, channel_id: int) -> None:
         channel: VoiceChannel = self._get_channel(channel_id)
-        await discord.VoiceChannel.connect(channel)
+        if self.is_connected():
+            await self._server.change_voice_state(channel=channel)
+        else:
+            await discord.VoiceChannel.connect(channel)
         _log.info("Joined: %s > %s.", self._server.name, channel.name)
 
     async def disconnect(self) -> None:
