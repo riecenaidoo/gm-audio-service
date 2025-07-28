@@ -10,9 +10,12 @@ import sys
 import discord
 import dotenv
 
-import api
+from playlist import Playlist
 import utils
 from bot import AudioClient
+from quart import Quart
+from quart_schema import QuartSchema
+from controller import ServerController
 
 _log = logging.getLogger(__name__)
 _log.addHandler(utils.HANDLER)
@@ -31,8 +34,11 @@ def run(token: str, port: int):
     intents = discord.Intents.default()
     intents.message_content = True
     client = AudioClient(intents=intents)
-    client_api = api.AudioServiceAPI(client, "__name__")
-
+    api = Quart(__name__)
+    playlist = Playlist(client)
+    QuartSchema(api)
+    ServerController(client, api, playlist)
+    
     async def runner():
         """|coro| Logs the Bot into Discord then starts coroutine services."""
 
@@ -47,7 +53,7 @@ def run(token: str, port: int):
 
         await asyncio.gather(
             client.connect(reconnect=True),
-            client_api.start("0.0.0.0", port),
+            api.run_task("0.0.0.0", port=5050)
         )
 
     asyncio.run(runner())

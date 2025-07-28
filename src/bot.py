@@ -4,6 +4,9 @@ import typing
 import discord
 from discord import Intents, Guild, VoiceChannel
 
+from models.responses.Server import Server
+from models.responses.Channel import Channel
+
 import utils
 
 _log = logging.getLogger(__name__)
@@ -11,22 +14,22 @@ _log.addHandler(utils.HANDLER)
 _log.setLevel(logging.INFO)
 
 
-class Channel:
-    def __init__(self, channel: VoiceChannel):
-        self.id: int = channel.id
-        self.name: str = channel.name
+# class Channel:
+#     def __init__(self, channel: VoiceChannel):
+#         self.id: int = channel.id
+#         self.name: str = channel.name
 
-    def serialize(self) -> dict:
-        return {"id": str(self.id), "name": self.name}
+#     def serialize(self) -> dict:
+#         return {"id": str(self.id), "name": self.name}
 
 
-class Server:
-    def __init__(self, server: Guild):
-        self.id: int = server.id
-        self.name: str = server.name
+# class Server:
+#     def __init__(self, server: Guild):
+#         self.id: int = server.id
+#         self.name: str = server.name
 
-    def serialize(self) -> dict:
-        return {"id": str(self.id), "name": self.name}
+#     def serialize(self) -> dict:
+#         return {"id": str(self.id), "name": self.name}
 
 
 class ServerAudio:
@@ -49,7 +52,7 @@ class ServerAudio:
             raise Exception(f"ServerAudio[{self._server.name}] is not connected.")
         for voice_channel in self._server.voice_channels:
             if voice_channel == self._server.voice_client.channel:
-                return Channel(voice_channel)
+                return Channel(**{'id': voice_channel.id, 'name': voice_channel.name})
         raise Exception(
             f"ServerAudio[{self._server.name}] is connected, but to a Channel that cannot be found in the Server."
         )
@@ -92,7 +95,7 @@ class AudioClient(discord.Client):
         }
 
     def get_servers(self) -> list[Server]:
-        return [Server(guild) for guild in self.guilds]
+        return [Server(**{"id": str(guild.id), "name": guild.name}) for guild in self.guilds]
 
     def _get_server(self, server_id: int) -> Guild:
         for server in self.guilds:
@@ -100,9 +103,9 @@ class AudioClient(discord.Client):
                 return server
         raise Exception(f"Server with id: '{server_id}' does not exist.")
 
-    def get_channels(self, server_id: int) -> list[Channel]:
+    def get_channels(self, server_id: int):
         server: Guild = self._get_server(server_id)
-        return [Channel(channel) for channel in server.voice_channels]
+        return [Channel(**{'id': str(channel.id), 'name': channel.name}) for channel in server.voice_channels]
 
     def get_server_audio(self, server_id: int) -> ServerAudio:
         return ServerAudio(self._get_server(server_id))

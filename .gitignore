@@ -4,6 +4,6 @@
 
 # Configs
 .idea
-
+.vscode
 # Cache
 __pycache__
