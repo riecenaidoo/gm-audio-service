@@ -4,33 +4,13 @@ import typing
 import discord
 from discord import Intents, Guild, VoiceChannel
 
-from models.responses.Server import Server
-from models.responses.Channel import Channel
+from models.responses import Server,Channel
 
 import utils
 
 _log = logging.getLogger(__name__)
 _log.addHandler(utils.HANDLER)
 _log.setLevel(logging.INFO)
-
-
-# class Channel:
-#     def __init__(self, channel: VoiceChannel):
-#         self.id: int = channel.id
-#         self.name: str = channel.name
-
-#     def serialize(self) -> dict:
-#         return {"id": str(self.id), "name": self.name}
-
-
-# class Server:
-#     def __init__(self, server: Guild):
-#         self.id: int = server.id
-#         self.name: str = server.name
-
-#     def serialize(self) -> dict:
-#         return {"id": str(self.id), "name": self.name}
-
 
 class ServerAudio:
     def __init__(self, server: Guild):
@@ -103,7 +83,7 @@ class AudioClient(discord.Client):
                 return server
         raise Exception(f"Server with id: '{server_id}' does not exist.")
 
-    def get_channels(self, server_id: int):
+    def get_channels(self, server_id: int) -> list[Channel]:
         server: Guild = self._get_server(server_id)
         return [Channel(**{'id': str(channel.id), 'name': channel.name}) for channel in server.voice_channels]
 
