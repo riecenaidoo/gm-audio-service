@@ -14,7 +14,6 @@ _log.setLevel(logging.ERROR)
 # Suppress noise about console usage from errors
 youtube_dl.utils.bug_reports_message = lambda: ""
 
-
 class YTDLSource(discord.PCMVolumeTransformer):
     """FFMPEG audio source extracted via the YTDL lib."""
 

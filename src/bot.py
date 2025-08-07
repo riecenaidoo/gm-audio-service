@@ -6,6 +6,7 @@ from discord import Intents, Guild, VoiceChannel
 
 from models.responses import Server,Channel
 
+from playlist import Playlist
 import utils
 
 _log = logging.getLogger(__name__)
@@ -66,6 +67,7 @@ class AudioClient(discord.Client):
 
     def __init__(self, *, intents: Intents, **options: typing.Any):
         super().__init__(intents=intents, **options)
+        self.playlist = Playlist()
 
     def serialize(self) -> dict:
         return {
@@ -89,3 +91,6 @@ class AudioClient(discord.Client):
 
     def get_server_audio(self, server_id: int) -> ServerAudio:
         return ServerAudio(self._get_server(server_id))
+    
+    def get_playlist(self):
+        return self.playlist

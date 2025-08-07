@@ -35,9 +35,8 @@ def run(token: str, port: int):
     intents.message_content = True
     client = AudioClient(intents=intents)
     api = Quart(__name__)
-    playlist = Playlist(client)
     QuartSchema(api)
-    ServerController(client, api, playlist)
+    ServerController(client, api)
     
     async def runner():
         """|coro| Logs the Bot into Discord then starts coroutine services."""
