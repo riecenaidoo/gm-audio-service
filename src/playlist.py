@@ -42,3 +42,6 @@ class Playlist:
         
     def clear_queue(self):
         self.songs = self.songs[:1]
+        
+    def clear_songlist(self):
+        self.songs = []
