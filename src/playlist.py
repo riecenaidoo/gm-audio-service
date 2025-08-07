@@ -40,6 +40,9 @@ class Playlist:
     def set_queue_next(self, newSongs: list[Song]):
         self.songs[1:] = newSongs
         
+    def skip_song(self):
+        self.songs = self.songs[1:]
+        
     def clear_queue(self):
         self.songs = self.songs[:1]
         
