@@ -6,4 +6,5 @@
 .idea
 
 # Cache
+.made
 __pycache__
