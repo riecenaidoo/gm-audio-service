@@ -20,7 +20,7 @@ _log.setLevel(logging.INFO)
 
 
 def run(token: str, port: int):
-    """|Blocking| Starts the MusicClient Bot and its console interfaces."""
+    """|Blocking| Starts the AudioClient Bot and its AudioService API."""
     discord.utils.setup_logging(
         handler=utils.HANDLER,
         formatter=utils.FORMATTER,
