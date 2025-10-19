@@ -4,7 +4,9 @@
 
 # Configs
 .idea
+.vscode
 
 # Cache
 .made
 __pycache__
+commit

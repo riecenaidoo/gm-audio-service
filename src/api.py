@@ -1,33 +1,24 @@
-import asyncio
 from json import dumps
 
-from flask import Flask, Response, jsonify, request
-from flask_cors import CORS
+from quart import Quart, Response, jsonify, request
+from quart_cors import cors
 
 from bot import AudioClient, ServerAudio
-from utils import to_thread
 
 
-class AudioServiceAPI(Flask):
+class AudioServiceAPI(Quart):
     def __init__(self, client: AudioClient, import_name: str):
         super().__init__(import_name)
         self.client = client
-        self.cors = CORS(
-            self,
-            resources={
-                r"/": {"origins": "http://localhost:4200"},
-                r"/servers/*": {"origins": "http://localhost:4200"},
-            },
-        )
+        cors(self, allow_origin="http://localhost:4200")
         self._add_routes()
 
-    @to_thread
-    def start(self, host, port):
+    async def start(self, host, port):
         """|coro|
 
-        Wrapper function for starting the Flask API server async in a thread.
+        Starts the Quart app using asyncio.
         """
-        self.run(host=host, port=port)
+        await self.run_task(host=host, port=port)
 
     def _add_routes(self) -> None:
         self.add_url_rule("/", view_func=self._get)
@@ -41,19 +32,19 @@ class AudioServiceAPI(Flask):
             methods=["GET", "POST", "DELETE"],
         )
 
-    def _get(self):
+    async def _get(self):
         """Application (AudioService) information."""
         return jsonify(self.client.serialize())
 
-    def _get_servers(self) -> Response:
+    async def _get_servers(self) -> Response:
         return jsonify([server.serialize() for server in self.client.get_servers()])
 
-    def _get_channels(self, server_id: int) -> Response:
+    async def _get_channels(self, server_id: int) -> Response:
         return jsonify(
             [channel.serialize() for channel in self.client.get_channels(server_id)]
         )
 
-    def _server_audio(self, server_id: int) -> Response:
+    async def _server_audio(self, server_id: int) -> Response:
         """Supports GET, POST, DELETE"""
         server_audio: ServerAudio = self.client.get_server_audio(server_id)
 
@@ -82,16 +73,12 @@ class AudioServiceAPI(Flask):
                 # Could validate this as well, and if not correct return 400.
                 channel_id: int = int(data.get("channel_id"))
                 # Should amend signature to grab the channel, and if not found return 400.
-                asyncio.run_coroutine_threadsafe(
-                    server_audio.join_channel(channel_id), self.client.loop
-                )
+                await server_audio.join_channel(channel_id)
                 return Response(status=202)
             case "DELETE":
                 if not server_audio.is_connected():
                     return Response(status=404)
-                asyncio.run_coroutine_threadsafe(
-                    server_audio.disconnect(), self.client.loop
-                )
+                await server_audio.disconnect(), self.client.loop
                 # https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/202
                 return Response(status=202)
             case _:

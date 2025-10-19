@@ -1,4 +1,4 @@
-# configs/makefiles/v1.1.0
+# configs/makefiles/v1.1.1
 # See [7.2.1 General Conventions for Makefiles](https://www.gnu.org/prep/standards/html_node/Makefile-Basics.html)
 SHELL := /bin/sh
 
@@ -56,44 +56,73 @@ rm-project:	##> remove all Project initialisation artifacts
 
 .PHONY: project project-dev rm-project
 # ========================================
+# Script Macros
+# ========================================
+define stop_process
+@if [ -f $(1) ]; then \
+	PID=$$(cat $(1)); \
+	if kill -0 $$PID 2>/dev/null; then \
+		kill -TERM $$PID; \
+		rm -f $(1); \
+	fi; \
+fi
+endef
+# ========================================
 # Python
 # ========================================
-start: $(MADE)/requirements	## run the Project
-	$(PYTHON) "./src/main.py"
+start: $(MADE) $(MADE)/requirements stop	## start the AudioService process
+	$(PYTHON) "./src/main.py" > $(MADE)/start 2>&1 & echo $$! > $(MADE)/start.pid
 
-.PHONY: start
+stop:	## stop the AudioService process
+	$(call stop_process, $(MADE)/start.pid)
+
+log:	## show logs of the AudioService process
+	tail $(MADE)/start
+	@printf '\033[0;36m\n%s\n\033[0m' "(Streaming Mode) tail -f $(MADE)/start"
+
+.PHONY: start stop log
 # ========================================
 # Linting Rules
 # ========================================
 lint: lint-diff lint-untracked	## alias to run linting (lint-diff) (lint-untracked) rules
 	git status -s
 
-lint-diff: $(MADE)/requirements-dev	##> run linting on modified (git diff HEAD) source (./src/) files only
-	git diff HEAD --diff-filter=ACM --name-only -z "./src/" | xargs -r -0 $(RUFF) check --fix
+lint-diff: $(MADE)/requirements-dev	##> run linting on modified (git diff HEAD) files
+	git diff HEAD --diff-filter=ACM --name-only --relative -z "./src/" | xargs -r -0 $(RUFF) check --fix
 
-lint-untracked: $(MADE)/requirements-dev	##> run linting on untracked source (./src/) files only
-	git ls-files --others --exclude-standard -z  "./src/" | xargs -r -0 $(RUFF) check --fix
+lint-untracked: $(MADE)/requirements-dev	##> run linting on untracked files
+	git ls-files --others --exclude-standard --full-name -z  "./src/" | xargs -r -0 $(RUFF) check --fix
 
-lint-source: $(MADE)/requirements-dev	##> run linting on (./src/) files
+lint-all: $(MADE)/requirements-dev	##> run linting on all files
 	$(RUFF) check "./src/" --fix
 
-.PHONY: lint lint-diff lint-untracked lint-source
+
+.PHONY: lint lint-diff lint-untracked lint-all
 # ========================================
 # Formatting Rules
 # ========================================
 format: format-diff format-untracked	## alias to run formatting (format-diff) (format-untracked) rules
 	git status -s
 
-format-diff: $(MADE)/requirements-dev	##> run formatting on modified (git diff HEAD) source (./src/) files only
-	git diff HEAD --diff-filter=ACM --name-only -z "./src/" | xargs -r -0 $(RUFF) format
+format-diff: $(MADE)/requirements-dev	##> run formatting on modified (git diff HEAD) files
+	git diff HEAD --diff-filter=ACM --name-only --relative -z | \
+	xargs -0 grep -lZ '[[:blank:]]$$' | \
+	xargs -0 --no-run-if-empty sed -i 's/[ \t]*$$//'
+	git diff HEAD --diff-filter=ACM --name-only --relative -z "./src/" | xargs -r -0 $(RUFF) format
 
-format-untracked: $(MADE)/requirements-dev	##> run formatting on untracked source (./src/) files only
-	git ls-files --others --exclude-standard -z  "./src/" | xargs -r -0 $(RUFF) format
+format-untracked: $(MADE)/requirements-dev	##> run formatting on untracked files
+	git ls-files --others --exclude-standard --full-name -z | \
+	xargs -0 grep -lZ '[[:blank:]]$$' | \
+	xargs -0 --no-run-if-empty sed -i 's/[ \t]*$$//'
+	git ls-files --others --exclude-standard --full-name -z  "./src/" | xargs -r -0 $(RUFF) format
 
-format-source: $(MADE)/requirements-dev	##> run formatting on (./src/) files
+format-all: $(MADE)/requirements-dev	##> run formatting on all files
+	find . -maxdepth 1 -type f -print0 | \
+	xargs -0 grep -lZ '[[:blank:]]$$' | \
+	xargs -0 --no-run-if-empty sed -i 's/[ \t]*$$//'
 	$(RUFF) format "./src/"
 
-.PHONY: format format-diff format-untracked format-source
+.PHONY: format format-diff format-untracked format-all
 # ========================================
 # Utilities
 # ========================================
