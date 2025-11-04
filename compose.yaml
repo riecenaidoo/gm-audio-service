@@ -1,10 +1,13 @@
+name: gm-dev
 services:
-  audio:
+  # [gm-discord]
+  discord:
+    container_name: "gm-dev-discord"
+    image: gm-discord:dev
+    build:
+      dockerfile: "./Dockerfile"
     ports:
       - "5050:5050"
     tty: true
     env_file:
-      - ".env"
-    build:
-      dockerfile: "Dockerfile"
-    container_name: "gm-audio-service-dev"
+      - "./.env"
