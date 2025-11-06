@@ -125,7 +125,7 @@ serve:	$(MADE) $(PYTHON) kill-serve	##> start the Python server
 kill-serve:	##> kill the Python server process
 	$(call stop_process,$(MADE)/serve.pid)
 
-PYTHON_FILTER := $(XARGS) grep -Z "\.py$$"
+PYTHON_FILTER := $(XARGS) awk -v RS='\0' '/\.py$$/'
 
 .PHONY: python python-dev rm-python serve kill-serve
 # =============================================================================
@@ -181,7 +181,7 @@ format-untracked: python-dev	##> run formatting on untracked files
 
 format-all: python-dev	##> run formatting on all files
 	find . -maxdepth 1 -type f -print0 | $(TRIM)
-	find src/ -type f -print0 | $(TRIM)
+	find .scripts/ src/ -type f -print0 | $(TRIM)
 	find src/ -type f -name '*.py' -print0 | $(FORMAT)
 
 .PHONY: format format-diff format-untracked format-all
