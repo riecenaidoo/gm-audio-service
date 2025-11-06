@@ -10,11 +10,9 @@ init: project git	## default (no-arg) target to initialise the Project and local
 # See [7.2.6 Standard Targets for Users > 'all'](https://www.gnu.org/prep/standards/html_node/Standard-Targets.html)
 all: init python	## primary target for creating all Project artifacts
 
-start: $(PYTHON) stop | $(MADE)	## start the Project (make stop)
-	$(PYTHON) "./src/main.py" > $(MADE)/serve 2>&1 & echo $$! > $(MADE)/serve.pid
+start: serve	## start the Project (make stop)
 
-stop:	## stop the Project
-	$(call stop_process,$(MADE)/start.pid)
+stop: kill-serve	## stop the Project
 
 log:	## show logs of the Project
 	tail $(MADE)/serve
@@ -34,9 +32,11 @@ PYTHON_HOME ?= python3
 # =============================================================================
 STOP_PROCESS := ./.scripts/stop-process.sh
 
+XARGS := xargs -0 --no-run-if-empty
+
 define stop_process	##> Given the PID file, stop the process
 @if [ -f "$(1)" ]; then \
-	xargs --no-run-if-empty --arg-file "$(1)" "$(STOP_PROCESS)"; \
+	$(XARGS) --arg-file "$(1)" "$(STOP_PROCESS)"; \
 fi
 endef
 # =============================================================================
@@ -116,49 +116,58 @@ $(RUFF) $(MADE)/requirements-dev: $(PIP) requirements-dev.txt | $(MADE)	## insta
 rm-python:	##> remove all Project initialisation artifacts
 	rm -rf $(VENV) $(MADE)
 	rm -rf .ruff_cache
-	find "./src" -type d -name "__pycache__" -print0 | xargs -0 rm -rf
+	find "./src" -type d -name "__pycache__" -print0 | $(XARGS) rm -rf
 
-.PHONY: python python-dev rm-python
+serve:	$(MADE) $(PYTHON) kill-serve	##> start the Python server
+	$(PYTHON) "./src/main.py" > $(MADE)/serve 2>&1 & echo $$! > $(MADE)/serve.pid
+
+kill-serve:	##> kill the Python server process
+	$(call stop_process,$(MADE)/serve.pid)
+
+.PHONY: python python-dev rm-python serve kill-serve
 # =============================================================================
 # Linting
 # =============================================================================
-LINT := $(RUFF) check --fix
-LINT_CHECK := $(RUFF) check
+LINT := $(XARGS) $(RUFF) check --fix
+LINT_CHECK := $(XARGS) $(RUFF) check
 
 lint: lint-diff lint-untracked	## alias to run linting (lint-diff) (lint-untracked) rules
 	git status -s
 
 lint-diff: python-dev	##> run linting on modified (git diff HEAD) files
-	$(DIFF_FILES) "./src/" | xargs -r -0 $(LINT)
+	$(DIFF_FILES) "./src/" | $(LINT)
 
 lint-diff-check: python-dev	##> run linting on modified (git diff HEAD) files
-	$(DIFF_FILES) "./src/" | xargs -r -0 $(LINT_CHECK)
+	$(DIFF_FILES) "./src/" | $(LINT_CHECK)
 
 lint-untracked: python-dev	##> run linting on untracked files
-	$(UNTRACKED_FILES) "./src/" | xargs -r -0 $(LINT)
+	$(UNTRACKED_FILES) "./src/" | $(LINT)
 
 lint-all: python-dev	##> run linting on all files
-	$(LINT) .
+	find src/ -type f -name '*.py' -print0 | $(LINT)
 
 .PHONY: lint lint-diff lint-untracked lint-all
 # =============================================================================
 # Formatting
 # =============================================================================
-FORMAT := $(RUFF) format
-FORMAT_CHECK := $(RUFF) format --check
+PLAINTEXT_FILTER := $(XARGS) file --mime-type | awk -F: '/text\// { printf "%s\0", $$1 }'
+PYTHON_FILTER := $(XARGS) grep -Z "\.py$$"
 
-TRIM_CHECK := xargs -0 grep -lZ '[[:blank:]]$$'
-TRIM := $(TRIM_CHECK) | xargs -0 --no-run-if-empty sed -i 's/[ \t]*$$//'
+FORMAT := $(PYTHON_FILTER) | $(XARGS) $(RUFF) format
+FORMAT_CHECK := $(PYTHON_FILTER) | $(XARGS) $(RUFF) format --check
+
+TRIM_CHECK := $(PLAINTEXT_FILTER) | $(XARGS) grep -lZ '[[:blank:]]$$'
+TRIM := $(TRIM_CHECK) | $(XARGS) sed -i 's/[ \t]*$$//'
 
 format: format-diff format-untracked	## alias to run formatting (format-diff) (format-untracked) rules
 	git status -s
 
 format-diff: python-dev	##> run formatting on modified (git diff HEAD) files
 	$(DIFF_FILES) | $(TRIM)
-	$(DIFF_FILES) "./src/" | xargs -r -0 $(FORMAT)
+	$(DIFF_FILES) | $(FORMAT)
 
 format-diff-check: python-dev	##> check formatting on modified (git diff HEAD) files
-	$(DIFF_FILES) "./src/" | xargs -r -0 $(FORMAT_CHECK)
+	$(DIFF_FILES) | $(FORMAT_CHECK)
 	@TRAILING_WHITESPACE_FILES=$$($(DIFF_FILES) | $(TRIM_CHECK)); \
 	if [ -n "$$TRAILING_WHITESPACE_FILES" ]; then \
 		  printf '\033[0;31m%s\033[0m' "Trailing Whitespaces!"; \
@@ -167,12 +176,13 @@ format-diff-check: python-dev	##> check formatting on modified (git diff HEAD) f
 	fi
 
 format-untracked: python-dev	##> run formatting on untracked files
-	$(UNTRACKED_FILES) "./src/" | xargs -r -0 $(FORMAT)
 	$(UNTRACKED_FILES) | $(TRIM)
+	$(UNTRACKED_FILES) | $(FORMAT)
 
 format-all: python-dev	##> run formatting on all files
 	find . -maxdepth 1 -type f -print0 | $(TRIM)
-	$(FORMAT) .
+	find src/ -type f -print0 | $(TRIM)
+	find src/ -type f -name '*.py' -print0 | $(FORMAT)
 
 .PHONY: format format-diff format-untracked format-all
 # =============================================================================
