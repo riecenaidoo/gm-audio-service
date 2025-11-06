@@ -30,9 +30,10 @@ PYTHON_HOME ?= python3
 # =============================================================================
 # Script Macros
 # =============================================================================
-STOP_PROCESS := ./.scripts/stop-process.sh
-
 XARGS := xargs -0 --no-run-if-empty
+PLAINTEXT_FILTER := $(XARGS) file --mime-type | awk -F: '/text\// { printf "%s\0", $$1 }'
+
+STOP_PROCESS := ./.scripts/stop-process.sh
 
 define stop_process	##> Given the PID file, stop the process
 @if [ -f "$(1)" ]; then \
@@ -124,24 +125,26 @@ serve:	$(MADE) $(PYTHON) kill-serve	##> start the Python server
 kill-serve:	##> kill the Python server process
 	$(call stop_process,$(MADE)/serve.pid)
 
+PYTHON_FILTER := $(XARGS) grep -Z "\.py$$"
+
 .PHONY: python python-dev rm-python serve kill-serve
 # =============================================================================
 # Linting
 # =============================================================================
-LINT := $(XARGS) $(RUFF) check --fix
-LINT_CHECK := $(XARGS) $(RUFF) check
+LINT := $(PYTHON_FILTER) | $(XARGS) $(RUFF) check --fix
+LINT_CHECK := $(PYTHON_FILTER) | $(XARGS) $(RUFF) check
 
 lint: lint-diff lint-untracked	## alias to run linting (lint-diff) (lint-untracked) rules
 	git status -s
 
 lint-diff: python-dev	##> run linting on modified (git diff HEAD) files
-	$(DIFF_FILES) "./src/" | $(LINT)
+	$(DIFF_FILES) | $(LINT)
 
 lint-diff-check: python-dev	##> run linting on modified (git diff HEAD) files
-	$(DIFF_FILES) "./src/" | $(LINT_CHECK)
+	$(DIFF_FILES) | $(LINT_CHECK)
 
 lint-untracked: python-dev	##> run linting on untracked files
-	$(UNTRACKED_FILES) "./src/" | $(LINT)
+	$(UNTRACKED_FILES) | $(LINT)
 
 lint-all: python-dev	##> run linting on all files
 	find src/ -type f -name '*.py' -print0 | $(LINT)
@@ -150,9 +153,6 @@ lint-all: python-dev	##> run linting on all files
 # =============================================================================
 # Formatting
 # =============================================================================
-PLAINTEXT_FILTER := $(XARGS) file --mime-type | awk -F: '/text\// { printf "%s\0", $$1 }'
-PYTHON_FILTER := $(XARGS) grep -Z "\.py$$"
-
 FORMAT := $(PYTHON_FILTER) | $(XARGS) $(RUFF) format
 FORMAT_CHECK := $(PYTHON_FILTER) | $(XARGS) $(RUFF) format --check
 
