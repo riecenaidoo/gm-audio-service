@@ -62,7 +62,10 @@ $(ENV):
 	echo "DISCORD_BOT_TOKEN=<your_token_here>" >> "$(ENV)" ; \
 
 rm-project:	##> remove all Project initialisation artifacts
-	rm -rf $(MADE)
+	rm -f $(MADE)/stop-script
+	@if [ -d $(MADE) ]; then \
+		rmdir --ignore-fail-on-non-empty $(MADE); \
+	fi
 
 .PHONY: project rm-project
 # =============================================================================
@@ -124,12 +127,12 @@ $(RUFF) $(MADE)/requirements-dev: $(PIP) requirements-dev.txt | $(MADE)	## insta
 	$(PIP) install -r requirements-dev.txt
 	touch $(MADE)/requirements-dev
 
-rm-python:	##> remove all Project initialisation artifacts
+rm-python: kill-serve	##> remove all Project initialisation artifacts
 	rm -rf $(VENV) $(MADE)
 	rm -rf .ruff_cache
 	find "./src" -type d -name "__pycache__" -print0 | $(XARGS) rm -rf
 
-serve:	$(MADE) $(PYTHON) kill-serve	##> start the Python server
+serve:	$(MADE) $(PYTHON) python kill-serve	##> start the Python server
 	$(PYTHON) "./src/main.py" > $(MADE)/serve 2>&1 & echo $$! > $(MADE)/serve.pid
 
 kill-serve:	##> kill the Python server process
@@ -199,7 +202,7 @@ format-all: python-dev	##> run formatting on all files
 # Utilities
 # =============================================================================
 # See [7.2.6 Standard Targets for Users > 'clean'](https://www.gnu.org/prep/standards/html_node/Standard-Targets.html)
-clean: rm-project rm-git rm-python	## alias for cleaning up all artifacts produced by this Project
+clean: rm-python rm-git rm-project	## alias for cleaning up all artifacts produced by this Project
 
 help:  ## show a summary of available targets
 	@printf "%s\n" \
