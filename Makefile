@@ -1,5 +1,5 @@
 # =============================================================================
-# configs:/makefiles/v1.3.1;/python/v1.0.0
+# configs:/makefiles/v1.3.1;/python/v1.0.1
 # =============================================================================
 # ANSI Color Escape Codes
 # =============================================================================
@@ -35,7 +35,11 @@ log:	## show logs of the Project
 # [6.10 Variables from the Environment](https://www.gnu.org/software/make/manual/html_node/Environment.html)
 
 ## only used to create the virtual environment
-PYTHON_HOME ?= python3
+ifeq ($(OS),Windows_NT)
+    PYTHON_HOME ?= python
+else
+    PYTHON_HOME ?= python3
+endif
 # =============================================================================
 # Script Macros
 # =============================================================================
@@ -45,7 +49,7 @@ PLAINTEXT_FILTER := $(XARGS) file --mime-type | awk -F: '/text\// { printf "%s\0
 STOP_PROCESS := ./.scripts/stop-process.sh
 
 ##> Given the PID file, stop the process
-define stop_process	
+define stop_process
 @if [ -f "$(1)" ]; then \
 	xargs --no-run-if-empty --arg-file "$(1)" "$(STOP_PROCESS)"; \
 fi
@@ -133,8 +137,16 @@ rm-docker:	##> remove all Docker artifacts produced by this script
 python: $(MADE)/requirements	##> alias for creating all Python artifacts
 
 VENV := ./.venv
-PIP := $(VENV)/bin/pip
-PYTHON := $(VENV)/bin/python3
+ifeq ($(OS),Windows_NT)
+    PIP := $(VENV)/Scripts/pip.exe
+else
+    PIP := $(VENV)/bin/pip
+endif
+ifeq ($(OS),Windows_NT)
+    PYTHON := $(VENV)/Scripts/python.exe
+else
+    PYTHON := $(VENV)/bin/python3
+endif
 
 $(VENV) $(PIP) $(PYTHON):	## initialise the virtual environment
 	$(PYTHON_HOME) -m venv $(VENV)
@@ -145,7 +157,11 @@ $(MADE)/requirements: $(PIP) requirements.txt | $(MADE)	## install, or update Pr
 
 python-dev: python $(MADE)/requirements-dev	##> alias for creating all Python development artifacts
 
-RUFF := $(VENV)/bin/ruff
+ifeq ($(OS),Windows_NT)
+    RUFF := $(VENV)/Scripts/ruff.exe
+else
+    RUFF := $(VENV)/bin/ruff
+endif
 
 $(RUFF) $(MADE)/requirements-dev: $(PIP) requirements-dev.txt | $(MADE)	## install, or update development dependencies
 	$(PIP) install -r requirements-dev.txt
