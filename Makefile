@@ -1,5 +1,5 @@
 # =============================================================================
-# configs:/makefiles/v1.3.1;/python/v1.0.1
+# configs:/makefiles/v1.3.2;/python/v1.0.2
 # =============================================================================
 # ANSI Color Escape Codes
 # =============================================================================
@@ -23,7 +23,7 @@ start: serve	## start the Project (make stop)
 
 stop: kill-serve	## stop the Project
 
-log:	## show logs of the Project
+logs:	## show logs of the Project
 	tail $(MADE)/serve
 	@printf "$(CYAN)\n%s\n$(NONE)" "(Streaming Mode) tail -f $(MADE)/serve"
 
@@ -116,22 +116,6 @@ rm-git:	##> remove all Git artifacts produced by this script
 
 .PHONY: git rm-git
 # =============================================================================
-# Docker
-# =============================================================================
-image: $(MADE)/image-dev	## build the (dev) image
-
-$(MADE)/image-dev: $(find src/ -type f -name '*.py')
-	docker build -t gm-discord:dev . -f ./Dockerfile
-	touch $(MADE)/image-dev
-
-latest: $(MADE)/image-dev	## tag the (dev) image as (latest)
-	docker tag gm-discord:dev gm-discord:latest
-
-rm-docker:	##> remove all Docker artifacts produced by this script
-	rm -f $(MADE)/image-dev
-
-.PHONY: image latest rm-docker
-# =============================================================================
 # PYTHON
 # =============================================================================
 python: $(MADE)/requirements	##> alias for creating all Python artifacts
@@ -178,9 +162,25 @@ serve:	$(MADE) $(PYTHON) python kill-serve	##> start the Python server
 kill-serve:	##> kill the Python server process
 	$(call stop_process,$(MADE)/serve.pid)
 
-PYTHON_FILTER := $(XARGS) awk -v RS='\0' '/\.py$$/'
+PYTHON_FILTER := grep -zE '\.(py)$$'
 
 .PHONY: python python-dev rm-python serve kill-serve
+# =============================================================================
+# Docker
+# =============================================================================
+image: $(MADE)/image-dev	## build the (dev) image
+
+$(MADE)/image-dev: $(find src/ -type f -name '*.py')
+	docker build -t gm-discord:dev . -f ./Dockerfile
+	touch $(MADE)/image-dev
+
+latest: $(MADE)/image-dev	## tag the (dev) image as (latest)
+	docker tag gm-discord:dev gm-discord:latest
+
+rm-docker:	##> remove all Docker artifacts produced by this script
+	rm -f $(MADE)/image-dev
+
+.PHONY: image latest rm-docker
 # =============================================================================
 # Linting
 # =============================================================================
