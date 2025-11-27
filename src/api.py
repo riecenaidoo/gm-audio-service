@@ -60,7 +60,7 @@ class AudioServiceAPI(Quart):
                     response=dumps(body), status=404, mimetype="application/json"
                 )
             case "POST":
-                data: dict = request.get_json()
+                data: dict = await request.get_json()
                 if "channel_id" not in data.keys():
                     body: dict = {
                         "error": "Required field 'channel_id' missing.",
